@@ -1,0 +1,6 @@
+# .gitignore 内容示例
+__pycache__/
+*.pyc
+.env
+venv/
+.DS_Store  # Mac 系统隐藏文件

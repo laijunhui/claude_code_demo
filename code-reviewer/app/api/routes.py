@@ -1,0 +1,173 @@
+# API 路由
+from typing import List, Optional
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Header
+from pydantic import BaseModel
+from app.agents.base import CodeFile
+from app.agents.manager import AgentManager, ReviewReport
+from app.logger import logger
+
+router = APIRouter()
+
+# 全局 Agent 管理器
+agent_manager = AgentManager()
+
+# 存储评审结果（生产环境应使用数据库）
+review_results: dict = {}
+
+
+# ============ 请求/响应模型 ============
+
+class ReviewRequest(BaseModel):
+    """评审请求"""
+    files: List[dict]  # [{"path": "xxx.py", "content": "code"}]
+    config: Optional[dict] = None  # Agent 配置
+
+
+class ReviewResponse(BaseModel):
+    """评审响应"""
+    review_id: str
+    status: str
+    summary: dict
+
+
+class ReviewDetailResponse(BaseModel):
+    """评审详情响应"""
+    review_id: str
+    status: str
+    summary: dict
+    issues: List[dict]
+    agents_results: List[dict]
+    duration_ms: int
+    files: List[str] = []
+
+
+# ============ API 端点 ============
+
+@router.post("/api/review", response_model=ReviewResponse)
+async def create_review(
+    request: ReviewRequest,
+    background_tasks: BackgroundTasks,
+    authorization: Optional[str] = Header(None)
+):
+    """手动触发代码评审"""
+
+    # 简单的 Token 验证
+    from app.config import settings
+    if authorization:
+        token = authorization.replace("Bearer ", "")
+        if token != settings.api_token:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+    # 验证输入
+    if not request.files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    if len(request.files) > 50:
+        raise HTTPException(status_code=400, detail="Too many files (max 50)")
+
+    # 创建代码文件对象
+    code_files = []
+    for f in request.files:
+        if "content" not in f or "path" not in f:
+            raise HTTPException(status_code=400, detail="Invalid file format")
+
+        code_files.append(CodeFile(
+            file_path=f["path"],
+            content=f["content"]
+        ))
+
+    # 创建评审任务
+    import uuid
+    review_id = f"review_{uuid.uuid4().hex[:8]}"
+    logger.info(f"Creating review task: {review_id} with {len(code_files)} files")
+
+    # 存储任务信息
+    review_results[review_id] = {
+        "status": "pending",
+        "files": request.files,
+        "config": request.config,
+    }
+
+    # 后台执行评审
+    background_tasks.add_task(
+        run_review_task,
+        review_id,
+        code_files,
+        request.config
+    )
+
+    return ReviewResponse(
+        review_id=review_id,
+        status="pending",
+        summary={"message": "Review task created"}
+    )
+
+
+@router.get("/api/review/{review_id}", response_model=ReviewDetailResponse)
+async def get_review(review_id: str):
+    """查询评审结果"""
+
+    if review_id not in review_results:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    result = review_results[review_id]
+
+    if "report" not in result:
+        return ReviewDetailResponse(
+            review_id=review_id,
+            status=result["status"],
+            summary={"message": "Review in progress"},
+            issues=[],
+            agents_results=[],
+            duration_ms=0,
+            files=[f.get("path", "") for f in result.get("files", [])]
+        )
+
+    report: ReviewReport = result["report"]
+
+    return ReviewDetailResponse(
+        review_id=review_id,
+        status="completed",
+        summary=report.get_summary(),
+        issues=[i.to_dict() for i in report.issues],
+        agents_results=[r.to_dict() for r in report.agents_results],
+        duration_ms=report.duration_ms,
+        files=report.files
+    )
+
+
+@router.get("/api/health")
+async def health_check():
+    """健康检查"""
+    return {
+        "status": "healthy",
+        "agents": [
+            {"name": agent.name, "enabled": True}
+            for agent in agent_manager.agents
+        ]
+    }
+
+
+# ============ 内部函数 ============
+
+async def run_review_task(review_id: str, files: List[CodeFile], config: Optional[dict]):
+    """执行评审任务"""
+
+    try:
+        # 更新状态
+        review_results[review_id]["status"] = "running"
+
+        # 执行评审
+        report = await agent_manager.run_review(files, config)
+
+        # 保存结果
+        review_results[review_id]["status"] = "completed"
+        review_results[review_id]["report"] = report
+
+    except Exception as e:
+        # 标记失败
+        logger.error(f"Review task {review_id} failed: {str(e)}")
+        review_results[review_id]["status"] = "failed"
+        review_results[review_id]["error"] = str(e)
+    else:
+        logger.info(f"Review task {review_id} completed successfully")

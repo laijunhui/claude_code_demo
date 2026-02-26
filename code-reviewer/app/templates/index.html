@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码评审工具</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --danger: #DC2626;
+            --warning: #F59E0B;
+            --success: #10B981;
+            --info: #3B82F6;
+            --bg: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --border: #E2E8F0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #166534;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Layout */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        textarea.form-input {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            min-height: 300px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 20px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .file-input-label:hover {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-primary:disabled {
+            background: #94A3B8;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-card {
+            padding: 16px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card.danger {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+        }
+
+        .stat-card.warning {
+            background: #FFFBEB;
+            border: 1px solid #FDE68A;
+        }
+
+        .stat-card.info {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+        }
+
+        .stat-card.success {
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-card.danger .stat-value { color: var(--danger); }
+        .stat-card.warning .stat-value { color: var(--warning); }
+        .stat-card.info .stat-value { color: var(--info); }
+        .stat-card.success .stat-value { color: var(--success); }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Issue List */
+        .issue-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .issue-item {
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+
+        .issue-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .issue-title {
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .severity-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .severity-badge.error {
+            background: #FEE2E2;
+            color: var(--danger);
+        }
+
+        .severity-badge.warning {
+            background: #FEF3C7;
+            color: #B45309;
+        }
+
+        .severity-badge.info {
+            background: #DBEAFE;
+            color: #1D4ED8;
+        }
+
+        .severity-badge.critical {
+            background: #FECACA;
+            color: #991B1B;
+        }
+
+        .type-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 6px;
+        }
+
+        .type-badge.syntax {
+            background: #FEE2E2;
+            color: #ef4444;
+        }
+
+        .type-badge.security {
+            background: #FEF3C7;
+            color: #f59e0b;
+        }
+
+        .type-badge.style {
+            background: #DBEAFE;
+            color: #3b82f6;
+        }
+
+        .type-badge.general {
+            background: #E5E7EB;
+            color: #6B7280;
+        }
+
+        .issue-location {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: monospace;
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .issue-message {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .issue-suggestion {
+            margin-top: 10px;
+            padding: 10px;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .issue-suggestion-title {
+            font-weight: 500;
+            color: var(--success);
+            margin-bottom: 4px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Agent Results */
+        .agent-results {
+            margin-top: 20px;
+        }
+
+        .agent-item {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .agent-name {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .agent-status {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .agent-status.success {
+            background: #F0FDF4;
+            color: #166534;
+        }
+
+        .agent-status.pending {
+            background: #FEF3C7;
+            color: #B45309;
+        }
+
+        .agent-output {
+            margin-top: 8px;
+            padding: 10px;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding: 20px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Animations */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">CR</div>
+                <span class="logo-text">代码评审工具</span>
+            </div>
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                服务正常
+            </div>
+        </header>
+
+        <div class="container">
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Left: Code Input -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>📝</span> 代码输入
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">文件名</label>
+                            <input
+                                type="text"
+                                class="form-input"
+                                v-model="fileName"
+                                placeholder="例如: app.js, main.py"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">代码内容</label>
+                            <textarea
+                                class="form-input"
+                                v-model="code"
+                                placeholder="在此粘贴您的代码..."
+                            ></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">或选择文件上传</label>
+                            <div class="file-input-wrapper">
+                                <input type="file" class="file-input" @change="handleFileUpload" accept=".js,.ts,.py,.java,.go,.rs,.vue,.jsx,.tsx">
+                                <div class="file-input-label">
+                                    <span>📁</span>
+                                    <span>点击或拖拽文件到此处上传</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            class="btn btn-primary"
+                            style="width: 100%;"
+                            @click="submitReview"
+                            :disabled="!canSubmit || loading"
+                        >
+                            <span v-if="loading">⏳</span>
+                            <span v-else>🚀</span>
+                            {{ loading ? '评审中...' : '提交评审' }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Results -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>📊</span> 评审结果
+                        </div>
+                        <button v-if="result" class="btn btn-secondary btn-sm" @click="clearResult">
+                            清空结果
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <!-- Loading State -->
+                        <div v-if="loading" class="loading">
+                            <div class="spinner"></div>
+                            <div class="loading-text">AI 正在分析您的代码...</div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div v-else-if="!result" class="empty-state">
+                            <div class="empty-icon">🔍</div>
+                            <div class="empty-title">暂无评审结果</div>
+                            <div>请在左侧输入代码并提交评审</div>
+                        </div>
+
+                        <!-- Results -->
+                        <div v-else>
+                            <!-- Stats: Severity -->
+                            <div class="stats-grid">
+                                <div class="stat-card danger">
+                                    <div class="stat-value">{{ stats.errors }}</div>
+                                    <div class="stat-label">严重问题</div>
+                                </div>
+                                <div class="stat-card warning">
+                                    <div class="stat-value">{{ stats.warnings }}</div>
+                                    <div class="stat-label">警告</div>
+                                </div>
+                                <div class="stat-card info">
+                                    <div class="stat-value">{{ stats.infos }}</div>
+                                    <div class="stat-label">提示</div>
+                                </div>
+                                <div class="stat-card success">
+                                    <div class="stat-value">{{ stats.files }}</div>
+                                    <div class="stat-label">文件数</div>
+                                </div>
+                            </div>
+
+                            <!-- Stats: Type -->
+                            <div class="stats-grid" style="margin-top: 12px;">
+                                <div class="stat-card" style="border-left: 3px solid #ef4444;">
+                                    <div class="stat-value">{{ stats.syntax }}</div>
+                                    <div class="stat-label">语法问题</div>
+                                </div>
+                                <div class="stat-card" style="border-left: 3px solid #f59e0b;">
+                                    <div class="stat-value">{{ stats.security }}</div>
+                                    <div class="stat-label">安全问题</div>
+                                </div>
+                                <div class="stat-card" style="border-left: 3px solid #3b82f6;">
+                                    <div class="stat-value">{{ stats.style }}</div>
+                                    <div class="stat-label">风格问题</div>
+                                </div>
+                            </div>
+
+                            <!-- Issue List -->
+                            <div v-if="result.issues && result.issues.length > 0" class="issue-list">
+                                <div
+                                    v-for="(issue, index) in result.issues"
+                                    :key="index"
+                                    class="issue-item"
+                                >
+                                    <div class="issue-header">
+                                        <div class="issue-title">
+                                            <span
+                                                class="severity-badge"
+                                                :class="issue.severity"
+                                            >
+                                                {{ getSeverityText(issue.severity) }}
+                                            </span>
+                                            <span
+                                                class="type-badge"
+                                                :class="issue.type"
+                                            >
+                                                {{ getTypeText(issue.type) }}
+                                            </span>
+                                            {{ issue.rule || '代码问题' }}
+                                        </div>
+                                        <span v-if="issue.file" class="issue-location">
+                                            {{ issue.file }}:{{ issue.line || '-' }}
+                                        </span>
+                                    </div>
+                                    <div class="issue-message">{{ issue.message }}</div>
+                                    <div v-if="issue.suggestion" class="issue-suggestion">
+                                        <div class="issue-suggestion-title">💡 建议</div>
+                                        {{ issue.suggestion }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-else class="empty-state">
+                                <div class="empty-icon">✅</div>
+                                <div class="empty-title">太棒了！没有发现问题</div>
+                                <div>您的代码通过了所有检查</div>
+                            </div>
+
+                            <!-- Agent Results -->
+                            <div v-if="result.agents_results && result.agents_results.length > 0" class="agent-results">
+                                <div class="card-title" style="margin-bottom: 12px;">
+                                    <span>🤖</span> Agent 执行结果
+                                </div>
+                                <div
+                                    v-for="(agent, index) in result.agents_results"
+                                    :key="index"
+                                    class="agent-item"
+                                >
+                                    <div class="agent-header">
+                                        <span class="agent-name">{{ agent.name }}</span>
+                                        <span
+                                            class="agent-status"
+                                            :class="agent.status === 'success' ? 'success' : 'pending'"
+                                        >
+                                            {{ agent.status === 'success' ? '完成' : '处理中' }}
+                                        </span>
+                                    </div>
+                                    <div v-if="agent.output" class="agent-output">
+                                        {{ agent.output }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                Code Reviewer v1.0.0 | 多Agent代码自动评审工具
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                const fileName = ref('');
+                const code = ref('');
+                const loading = ref(false);
+                const result = ref(null);
+
+                const canSubmit = computed(() => {
+                    return (fileName.value.trim() || code.value.trim()) && code.value.trim();
+                });
+
+                const stats = computed(() => {
+                    if (!result.value || !result.value.issues) {
+                        return { errors: 0, warnings: 0, infos: 0, files: 0, syntax: 0, security: 0, style: 0 };
+                    }
+                    const issues = result.value.issues;
+                    return {
+                        errors: issues.filter(i => i.severity === 'error' || i.severity === 'critical').length,
+                        warnings: issues.filter(i => i.severity === 'warning').length,
+                        infos: issues.filter(i => i.severity === 'info').length,
+                        files: result.value.files?.length || 1,
+                        syntax: issues.filter(i => i.type === 'syntax').length,
+                        security: issues.filter(i => i.type === 'security').length,
+                        style: issues.filter(i => i.type === 'style').length
+                    };
+                });
+
+                const getSeverityText = (severity) => {
+                    const map = {
+                        critical: '严重',
+                        error: '错误',
+                        warning: '警告',
+                        info: '提示'
+                    };
+                    return map[severity] || severity;
+                };
+
+                const getTypeText = (type) => {
+                    const map = {
+                        syntax: '语法',
+                        security: '安全',
+                        style: '风格',
+                        general: '一般'
+                    };
+                    return map[type] || type;
+                };
+
+                const handleFileUpload = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    fileName.value = file.name;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        code.value = e.target.result;
+                    };
+                    reader.readAsText(file);
+                };
+
+                const submitReview = async () => {
+                    if (!canSubmit.value || loading.value) return;
+
+                    loading.value = true;
+                    result.value = null;
+
+                    try {
+                        const response = await fetch('/api/review', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                files: [
+                                    {
+                                        path: fileName.value || 'untitled',
+                                        content: code.value
+                                    }
+                                ]
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('评审请求失败');
+                        }
+
+                        const data = await response.json();
+
+                        // 轮询获取结果
+                        await pollResult(data.review_id);
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('评审失败: ' + error.message);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const pollResult = async (reviewId) => {
+                    const maxAttempts = 60;
+                    let attempts = 0;
+
+                    while (attempts < maxAttempts) {
+                        try {
+                            const response = await fetch(`/api/review/${reviewId}`);
+                            if (!response.ok) {
+                                throw new Error('获取结果失败');
+                            }
+
+                            const data = await response.json();
+
+                            if (data.status === 'completed') {
+                                result.value = data;
+                                return;
+                            } else if (data.status === 'failed') {
+                                throw new Error('评审失败');
+                            }
+
+                            // 继续轮询
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            attempts++;
+                        } catch (error) {
+                            console.error('Poll error:', error);
+                            throw error;
+                        }
+                    }
+
+                    throw new Error('评审超时');
+                };
+
+                const clearResult = () => {
+                    result.value = null;
+                    fileName.value = '';
+                    code.value = '';
+                };
+
+                return {
+                    fileName,
+                    code,
+                    loading,
+                    result,
+                    canSubmit,
+                    stats,
+                    getSeverityText,
+                    getTypeText,
+                    handleFileUpload,
+                    submitReview,
+                    clearResult
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
