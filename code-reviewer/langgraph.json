@@ -1,0 +1,7 @@
+{
+  "graphs": {
+    "weather_agent": "./app/langchain/agent_demo.py:weather_agent",
+    "rag_pipeline": "./app/langchain/lg_pipeline.py:workflow"
+  },
+  "env": ".env"
+}

@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审查详情 - 代码评审工具</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --danger: #DC2626;
+            --warning: #F59E0B;
+            --success: #10B981;
+            --info: #3B82F6;
+            --bg: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --border: #E2E8F0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 16px;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Back Link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 20px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--primary);
+        }
+
+        /* Card */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-badge.completed {
+            background: #F0FDF4;
+            color: #166534;
+            border: 1px solid #BBF7D0;
+        }
+
+        .status-badge.running {
+            background: #EFF6FF;
+            color: #1D4ED8;
+            border: 1px solid #BFDBFE;
+        }
+
+        .status-badge.pending {
+            background: #F9FAFB;
+            color: #6B7280;
+            border: 1px solid #E5E7EB;
+        }
+
+        .status-badge.failed {
+            background: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-badge.running .status-dot {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Summary Grid */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 16px;
+            border-radius: 10px;
+        }
+
+        .summary-item.files {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+        }
+
+        .summary-item.critical {
+            background: #FEF2F2;
+            border: 1px solid #FECACA;
+        }
+
+        .summary-item.error {
+            background: #FEF3C7;
+            border: 1px solid #FDE68A;
+        }
+
+        .summary-item.warning {
+            background: #FFFBEB;
+            border: 1px solid #FDE68A;
+        }
+
+        .summary-item.info {
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+        }
+
+        .summary-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .summary-item.files .summary-value { color: var(--info); }
+        .summary-item.critical .summary-value { color: #991B1B; }
+        .summary-item.error .summary-value { color: var(--danger); }
+        .summary-item.warning .summary-value { color: var(--warning); }
+        .summary-item.info .summary-value { color: var(--success); }
+
+        .summary-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Review Info */
+        .review-info {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .review-info-item {
+            font-size: 14px;
+        }
+
+        .review-info-label {
+            color: var(--text-secondary);
+            margin-right: 8px;
+        }
+
+        .review-info-value {
+            font-weight: 500;
+            font-family: monospace;
+        }
+
+        /* Issue List */
+        .issue-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .issue-item {
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .issue-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .issue-title {
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .severity-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .severity-badge.critical {
+            background: #FECACA;
+            color: #991B1B;
+        }
+
+        .severity-badge.error {
+            background: #FEE2E2;
+            color: var(--danger);
+        }
+
+        .severity-badge.warning {
+            background: #FEF3C7;
+            color: #B45309;
+        }
+
+        .severity-badge.info {
+            background: #DBEAFE;
+            color: #1D4ED8;
+        }
+
+        .type-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 6px;
+        }
+
+        .type-badge.syntax {
+            background: #FEE2E2;
+            color: #ef4444;
+        }
+
+        .type-badge.security {
+            background: #FEF3C7;
+            color: #f59e0b;
+        }
+
+        .type-badge.style {
+            background: #DBEAFE;
+            color: #3b82f6;
+        }
+
+        .type-badge.general {
+            background: #E5E7EB;
+            color: #6B7280;
+        }
+
+        .issue-location {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: monospace;
+            background: var(--bg);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .issue-message {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .issue-suggestion {
+            margin-top: 10px;
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 13px;
+            border-left: 3px solid var(--success);
+        }
+
+        .issue-suggestion-title {
+            font-weight: 500;
+            color: var(--success);
+            margin-bottom: 4px;
+        }
+
+        /* Agent Results */
+        .agent-results {
+            margin-top: 20px;
+        }
+
+        .agent-item {
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .agent-status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .agent-status.success {
+            background: #F0FDF4;
+            color: #166534;
+            border: 1px solid #BBF7D0;
+        }
+
+        .agent-status.pending {
+            background: #FEF3C7;
+            color: #B45309;
+            border: 1px solid #FDE68A;
+        }
+
+        .agent-status.failed {
+            background: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        .agent-output {
+            padding: 12px;
+            background: var(--bg);
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 20px;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Error State */
+        .error-state {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .error-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .error-message {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding: 20px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Filter Tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: white;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-tab:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .filter-tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .filter-tab .count {
+            margin-left: 6px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .filter-tab.active .count {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <a href="/" class="logo">
+                <div class="logo-icon">CR</div>
+                <span class="logo-text">代码评审工具</span>
+            </a>
+            <nav class="nav-links">
+                <a href="/" class="nav-link">代码评审</a>
+                <a href="/history" class="nav-link active">历史记录</a>
+            </nav>
+        </header>
+
+        <div class="container">
+            <!-- Back Link -->
+            <a href="/history" class="back-link">
+                <span>&larr;</span> 返回历史记录
+            </a>
+
+            <!-- Loading -->
+            <div v-if="loading" class="loading">
+                <div class="spinner"></div>
+                <div class="loading-text">加载审查详情...</div>
+            </div>
+
+            <!-- Error -->
+            <div v-else-if="error" class="error-state">
+                <div class="error-icon">⚠️</div>
+                <div class="error-title">加载失败</div>
+                <div class="error-message">{{ error }}</div>
+                <a href="/history" class="btn btn-primary">返回历史记录</a>
+            </div>
+
+            <!-- Review Detail -->
+            <div v-else-if="review">
+                <!-- Summary Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>📊</span> 审查摘要
+                        </div>
+                        <span class="status-badge" :class="review.status">
+                            <span class="status-dot"></span>
+                            {{ getStatusText(review.status) }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Review Info -->
+                        <div class="review-info">
+                            <div class="review-info-item">
+                                <span class="review-info-label">审查 ID:</span>
+                                <span class="review-info-value">{{ review.review_id }}</span>
+                            </div>
+                            <div class="review-info-item">
+                                <span class="review-info-label">文件数:</span>
+                                <span class="review-info-value">{{ review.files?.length || 0 }}</span>
+                            </div>
+                            <div class="review-info-item">
+                                <span class="review-info-label">处理时长:</span>
+                                <span class="review-info-value">{{ formatDuration(review.duration_ms) }}</span>
+                            </div>
+                            <div class="review-info-item">
+                                <span class="review-info-label">创建时间:</span>
+                                <span class="review-info-value">{{ formatDate(review.created_at) }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="summary-grid">
+                            <div class="summary-item files">
+                                <div class="summary-value">{{ review.files?.length || 0 }}</div>
+                                <div class="summary-label">文件数</div>
+                            </div>
+                            <div class="summary-item critical">
+                                <div class="summary-value">{{ stats.critical }}</div>
+                                <div class="summary-label">严重问题</div>
+                            </div>
+                            <div class="summary-item error">
+                                <div class="summary-value">{{ stats.error }}</div>
+                                <div class="summary-label">错误</div>
+                            </div>
+                            <div class="summary-item warning">
+                                <div class="summary-value">{{ stats.warning }}</div>
+                                <div class="summary-label">警告</div>
+                            </div>
+                            <div class="summary-item info">
+                                <div class="summary-value">{{ stats.info }}</div>
+                                <div class="summary-label">提示</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Files Card -->
+                <div class="card" v-if="review.files && review.files.length > 0">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>📁</span> 审查文件 ({{ review.files.length }})
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            <span v-for="file in review.files" :key="file" class="issue-location">
+                                {{ file }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Issues Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>🐛</span> 问题列表 ({{ filteredIssues.length }})
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filter Tabs -->
+                        <div class="filter-tabs">
+                            <button
+                                class="filter-tab"
+                                :class="{ active: issueFilter === 'all' }"
+                                @click="issueFilter = 'all'"
+                            >
+                                全部 <span class="count">{{ review.issues?.length || 0 }}</span>
+                            </button>
+                            <button
+                                class="filter-tab"
+                                :class="{ active: issueFilter === 'critical' }"
+                                @click="issueFilter = 'critical'"
+                            >
+                                严重 <span class="count">{{ stats.critical }}</span>
+                            </button>
+                            <button
+                                class="filter-tab"
+                                :class="{ active: issueFilter === 'error' }"
+                                @click="issueFilter = 'error'"
+                            >
+                                错误 <span class="count">{{ stats.error }}</span>
+                            </button>
+                            <button
+                                class="filter-tab"
+                                :class="{ active: issueFilter === 'warning' }"
+                                @click="issueFilter = 'warning'"
+                            >
+                                警告 <span class="count">{{ stats.warning }}</span>
+                            </button>
+                            <button
+                                class="filter-tab"
+                                :class="{ active: issueFilter === 'info' }"
+                                @click="issueFilter = 'info'"
+                            >
+                                提示 <span class="count">{{ stats.info }}</span>
+                            </button>
+                        </div>
+
+                        <!-- Issue List -->
+                        <div v-if="filteredIssues.length > 0" class="issue-list">
+                            <div
+                                v-for="(issue, index) in filteredIssues"
+                                :key="index"
+                                class="issue-item"
+                            >
+                                <div class="issue-header">
+                                    <div class="issue-title">
+                                        <span
+                                            class="severity-badge"
+                                            :class="issue.severity"
+                                        >
+                                            {{ getSeverityText(issue.severity) }}
+                                        </span>
+                                        <span
+                                            class="type-badge"
+                                            :class="issue.type"
+                                        >
+                                            {{ getTypeText(issue.type) }}
+                                        </span>
+                                        <span style="margin-left: 8px;">{{ issue.rule || '代码问题' }}</span>
+                                    </div>
+                                    <span v-if="issue.file" class="issue-location">
+                                        {{ issue.file }}:{{ issue.line || '-' }}
+                                    </span>
+                                </div>
+                                <div class="issue-message">{{ issue.message }}</div>
+                                <div v-if="issue.suggestion" class="issue-suggestion">
+                                    <div class="issue-suggestion-title">建议</div>
+                                    {{ issue.suggestion }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else class="empty-state">
+                            <div class="empty-icon">✅</div>
+                            <div class="empty-title">没有发现{{ issueFilter === 'all' ? '' : issueFilter }}问题</div>
+                            <div>您的代码通过了所有检查</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Results Card -->
+                <div class="card" v-if="review.agents_results && review.agents_results.length > 0">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span>🤖</span> Agent 执行结果
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div
+                            v-for="(agent, index) in review.agents_results"
+                            :key="index"
+                            class="agent-item"
+                        >
+                            <div class="agent-header">
+                                <span class="agent-name">
+                                    <span v-if="getAgentIcon(agent.name)">{{ getAgentIcon(agent.name) }}</span>
+                                    {{ agent.name }}
+                                </span>
+                                <span
+                                    class="agent-status"
+                                    :class="agent.status === 'success' ? 'success' : (agent.status === 'failed' ? 'failed' : 'pending')"
+                                >
+                                    {{ agent.status === 'success' ? '完成' : (agent.status === 'failed' ? '失败' : '处理中') }}
+                                </span>
+                            </div>
+                            <div v-if="agent.output" class="agent-output">
+                                {{ agent.output }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                Code Reviewer v1.0.0 | 多Agent代码自动评审工具
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const error = ref(null);
+                const review = ref(null);
+                const issueFilter = ref('all');
+
+                // 从 URL 获取 review_id
+                const getReviewId = () => {
+                    const path = window.location.pathname;
+                    const match = path.match(/\/review\/(\S+)/);
+                    return match ? match[1] : null;
+                };
+
+                const reviewId = getReviewId();
+
+                const loadReview = async () => {
+                    if (!reviewId) {
+                        error.value = '无效的审查 ID';
+                        loading.value = false;
+                        return;
+                    }
+
+                    loading.value = true;
+                    error.value = null;
+
+                    try {
+                        const response = await fetch(`/api/reviews/${reviewId}`);
+                        if (!response.ok) {
+                            if (response.status === 404) {
+                                throw new Error('审查记录不存在');
+                            }
+                            throw new Error('加载失败');
+                        }
+
+                        const data = await response.json();
+                        review.value = data;
+                    } catch (err) {
+                        error.value = err.message;
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                // 定时刷新（对于 running 状态）
+                let pollInterval = null;
+
+                const startPolling = () => {
+                    if (pollInterval) clearInterval(pollInterval);
+                    pollInterval = setInterval(() => {
+                        if (review.value && review.value.status === 'running') {
+                            loadReview();
+                        } else if (review.value && review.value.status !== 'running') {
+                            clearInterval(pollInterval);
+                        }
+                    }, 3000);
+                };
+
+                const stats = computed(() => {
+                    if (!review.value || !review.value.issues) {
+                        return { critical: 0, error: 0, warning: 0, info: 0 };
+                    }
+
+                    const issues = review.value.issues;
+                    return {
+                        critical: issues.filter(i => i.severity === 'critical').length,
+                        error: issues.filter(i => i.severity === 'error').length,
+                        warning: issues.filter(i => i.severity === 'warning').length,
+                        info: issues.filter(i => i.severity === 'info').length
+                    };
+                });
+
+                const filteredIssues = computed(() => {
+                    if (!review.value || !review.value.issues) return [];
+
+                    if (issueFilter.value === 'all') {
+                        return review.value.issues;
+                    }
+
+                    return review.value.issues.filter(i => i.severity === issueFilter.value);
+                });
+
+                const getStatusText = (status) => {
+                    const map = {
+                        pending: '等待中',
+                        running: '处理中',
+                        completed: '已完成',
+                        failed: '失败'
+                    };
+                    return map[status] || status;
+                };
+
+                const getSeverityText = (severity) => {
+                    const map = {
+                        critical: '严重',
+                        error: '错误',
+                        warning: '警告',
+                        info: '提示'
+                    };
+                    return map[severity] || severity;
+                };
+
+                const getTypeText = (type) => {
+                    const map = {
+                        syntax: '语法',
+                        security: '安全',
+                        style: '风格',
+                        general: '一般'
+                    };
+                    return map[type] || type;
+                };
+
+                const getAgentIcon = (name) => {
+                    const iconMap = {
+                        'SyntaxAgent': '📝',
+                        'SecurityAgent': '🔒',
+                        'StyleAgent': '🎨'
+                    };
+                    return iconMap[name] || '';
+                };
+
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return dateStr;
+
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                };
+
+                const formatDuration = (ms) => {
+                    if (!ms) return '-';
+                    if (ms < 1000) return `${ms}ms`;
+                    if (ms < 60000) return `${(ms / 1000).toFixed(2)}s`;
+                    return `${(ms / 60000).toFixed(2)}分钟`;
+                };
+
+                onMounted(() => {
+                    loadReview().then(() => {
+                        if (review.value && review.value.status === 'running') {
+                            startPolling();
+                        }
+                    });
+                });
+
+                // 清理
+                watch(() => review.value?.status, (newStatus) => {
+                    if (newStatus === 'running') {
+                        startPolling();
+                    } else if (pollInterval) {
+                        clearInterval(pollInterval);
+                    }
+                });
+
+                return {
+                    loading,
+                    error,
+                    review,
+                    issueFilter,
+                    stats,
+                    filteredIssues,
+                    getStatusText,
+                    getSeverityText,
+                    getTypeText,
+                    getAgentIcon,
+                    formatDate,
+                    formatDuration
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -129,6 +129,17 @@
             align-items: center;
         }
 
+        .back-link {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--primary);
+        }
+
         .card-title {
             font-size: 16px;
             font-weight: 600;
@@ -551,9 +562,14 @@
                 <div class="logo-icon">CR</div>
                 <span class="logo-text">代码评审工具</span>
             </div>
-            <div class="status-badge">
-                <span class="status-dot"></span>
-                服务正常
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <a href="/history" class="nav-link" style="text-decoration: none; color: var(--text-secondary); font-size: 14px; padding: 8px 12px; border-radius: 6px; transition: all 0.2s;" onmouseover="this.style.background='var(--bg)'; this.style.color='var(--text)'" onmouseout="this.style.background='transparent'; this.style.color='var(--text-secondary)'">
+                    📋 历史记录
+                </a>
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    服务正常
+                </div>
             </div>
         </header>
 
@@ -563,6 +579,7 @@
                 <!-- Left: Code Input -->
                 <div class="card">
                     <div class="card-header">
+                        <a href="/history" class="back-link">← 返回列表</a>
                         <div class="card-title">
                             <span>📝</span> 代码输入
                         </div>

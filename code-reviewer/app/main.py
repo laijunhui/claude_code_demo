@@ -7,6 +7,7 @@ from app.api import routes, webhooks
 from app.config import settings
 from app.logger import logger
 from app.middleware import LoggingMiddleware
+from app.storage import init_storage
 from pydantic import BaseModel  # 用于定义数据模型（自动校验）
 
 # 创建 FastAPI 应用
@@ -15,6 +16,10 @@ app = FastAPI(
     description="多Agent代码自动评审工具 - API",
     version="1.0.0",
 )
+
+# 启动时初始化存储层
+storage = init_storage(settings.storage_base_dir)
+logger.info(f"Storage initialized at {settings.storage_base_dir}")
 
 # 启动时记录日志
 logger.info(f"Starting Code Reviewer API on {settings.host}:{settings.port}")
@@ -49,6 +54,20 @@ async def root():
     from fastapi.responses import FileResponse
     logger.info("Root endpoint accessed")
     return FileResponse(os.path.join(os.path.dirname(__file__), "templates", "index.html"))
+
+
+@app.get("/history")
+async def history():
+    """历史记录页面"""
+    from fastapi.responses import FileResponse
+    return FileResponse(os.path.join(os.path.dirname(__file__), "templates", "history.html"))
+
+
+@app.get("/review/{review_id}")
+async def review_detail(review_id: str):
+    """审查详情页面"""
+    from fastapi.responses import FileResponse
+    return FileResponse(os.path.join(os.path.dirname(__file__), "templates", "review.html"))
 
 
 # 定义GET请求接口：路径为/，请求方法GET

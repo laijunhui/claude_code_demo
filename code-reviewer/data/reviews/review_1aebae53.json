@@ -1,0 +1,330 @@
+{
+  "status": "completed",
+  "files": [
+    "main.py"
+  ],
+  "config": null,
+  "summary": {
+    "review_id": "review_1772614388247",
+    "files_count": 1,
+    "total_issues": 15,
+    "by_severity": {
+      "critical": 0,
+      "error": 0,
+      "warning": 4,
+      "info": 11
+    },
+    "by_type": {
+      "syntax": 0,
+      "security": 0,
+      "style": 6,
+      "general": 9
+    },
+    "duration_ms": 32709
+  },
+  "issues": [
+    {
+      "file_path": "main.py",
+      "line": 5,
+      "column": 1,
+      "severity": "warning",
+      "type": "style",
+      "message": "注释语言不一致，混合使用中英文",
+      "suggestion": "统一注释语言风格，建议使用英文或中文其一"
+    },
+    {
+      "file_path": "main.py",
+      "line": 15,
+      "column": 1,
+      "severity": "warning",
+      "type": "best_practice",
+      "message": "CORS配置允许所有来源(allow_origins=['*'])，存在安全风险",
+      "suggestion": "根据实际需求限制允许的域名，如: allow_origins=settings.allowed_hosts 或具体域名列表"
+    },
+    {
+      "file_path": "main.py",
+      "line": 23,
+      "column": 1,
+      "severity": "warning",
+      "type": "best_practice",
+      "message": "存储初始化在模块级别执行，未使用FastAPI的lifespan事件",
+      "suggestion": "使用 lifespan 上下文管理器处理启动和关闭逻辑，更符合FastAPI最佳实践"
+    },
+    {
+      "file_path": "main.py",
+      "line": 52,
+      "column": 1,
+      "severity": "warning",
+      "type": "code_smell",
+      "message": "存在多个示例/测试路由(/hello, /items/, /users/)，这些可能不是生产代码",
+      "suggestion": "如为示例代码，建议移除或添加注释说明；如为业务代码，需完善实现逻辑"
+    },
+    {
+      "file_path": "main.py",
+      "line": 1,
+      "column": 1,
+      "severity": "info",
+      "type": "style",
+      "message": "导入语句未分组。标准库、第三方库和本地应用模块应分组导入",
+      "suggestion": "将导入分为三组：import语句、from第三方库导入、from本地应用导入，组间用空行分隔"
+    },
+    {
+      "file_path": "main.py",
+      "line": 18,
+      "column": 1,
+      "severity": "info",
+      "type": "code_smell",
+      "message": "allow_credentials=True 与 allow_origins=['*'] 一起使用会导致CORS策略失效",
+      "suggestion": "如果设置 allow_credentials=True，必须指定具体的允许来源，不能使用 '*' 通配符"
+    },
+    {
+      "file_path": "main.py",
+      "line": 27,
+      "column": 1,
+      "severity": "info",
+      "type": "code_smell",
+      "message": "路径计算 os.path.dirname(__file__) 重复出现多次",
+      "suggestion": "将 templates 目录路径提取为常量或配置项，避免重复计算"
+    },
+    {
+      "file_path": "main.py",
+      "line": 30,
+      "column": 1,
+      "severity": "info",
+      "type": "code_smell",
+      "message": "import语句放在函数内部(FileResponse)，影响代码可读性",
+      "suggestion": "将 FileResponse 的导入移到文件顶部"
+    },
+    {
+      "file_path": "main.py",
+      "line": 30,
+      "column": 1,
+      "severity": "info",
+      "type": "best_practice",
+      "message": "root() 函数返回前端页面，不符合RESTful API设计原则",
+      "suggestion": "根路径应返回API元信息或状态，前端页面应通过独立的前端服务或静态文件处理"
+    },
+    {
+      "file_path": "main.py",
+      "line": 41,
+      "column": 1,
+      "severity": "info",
+      "type": "code_smell",
+      "message": "review_detail() 路由未使用传入的 review_id 参数",
+      "suggestion": "使用 review_id 获取对应的审查详情数据，或改为路径参数无关的静态页面"
+    },
+    {
+      "file_path": "main.py",
+      "line": 54,
+      "column": 1,
+      "severity": "info",
+      "type": "style",
+      "message": "函数定义上方缺少空行",
+      "suggestion": "在 read_root() 前添加空行，保持代码格式一致"
+    },
+    {
+      "file_path": "main.py",
+      "line": 57,
+      "column": 1,
+      "severity": "info",
+      "type": "style",
+      "message": "read_item() 函数使用了非 async 定义，但其他路由均为 async",
+      "suggestion": "保持一致性，全部使用 async 定义，或确认同步实现的必要性"
+    },
+    {
+      "file_path": "main.py",
+      "line": 69,
+      "column": 1,
+      "severity": "info",
+      "type": "style",
+      "message": "Item 类定义后缺少空行",
+      "suggestion": "在 create_item() 函数前添加空行"
+    },
+    {
+      "file_path": "main.py",
+      "line": 73,
+      "column": 1,
+      "severity": "info",
+      "type": "style",
+      "message": "注释格式不统一，有些使用中文有些使用英文",
+      "suggestion": "统一注释语言和格式风格"
+    },
+    {
+      "file_path": "main.py",
+      "line": 78,
+      "column": 1,
+      "severity": "info",
+      "type": "best_practice",
+      "message": "main 入口使用 reload=True 生产环境不建议启用",
+      "suggestion": "生产环境应使用 gunicorn 等 WSGI 服务器，reload 仅用于开发"
+    }
+  ],
+  "agents_results": [
+    {
+      "name": "syntax",
+      "agent_name": "syntax",
+      "status": "success",
+      "output": "分析了 0 个问题",
+      "issues": [],
+      "duration_ms": 4852,
+      "error": null
+    },
+    {
+      "name": "security",
+      "agent_name": "security",
+      "status": "success",
+      "output": "分析了 0 个问题",
+      "issues": [],
+      "duration_ms": 395,
+      "error": null
+    },
+    {
+      "name": "style",
+      "agent_name": "style",
+      "status": "success",
+      "output": "分析了 15 个问题",
+      "issues": [
+        {
+          "file_path": "main.py",
+          "line": 1,
+          "column": 1,
+          "severity": "info",
+          "type": "style",
+          "message": "导入语句未分组。标准库、第三方库和本地应用模块应分组导入",
+          "suggestion": "将导入分为三组：import语句、from第三方库导入、from本地应用导入，组间用空行分隔"
+        },
+        {
+          "file_path": "main.py",
+          "line": 5,
+          "column": 1,
+          "severity": "warning",
+          "type": "style",
+          "message": "注释语言不一致，混合使用中英文",
+          "suggestion": "统一注释语言风格，建议使用英文或中文其一"
+        },
+        {
+          "file_path": "main.py",
+          "line": 15,
+          "column": 1,
+          "severity": "warning",
+          "type": "best_practice",
+          "message": "CORS配置允许所有来源(allow_origins=['*'])，存在安全风险",
+          "suggestion": "根据实际需求限制允许的域名，如: allow_origins=settings.allowed_hosts 或具体域名列表"
+        },
+        {
+          "file_path": "main.py",
+          "line": 18,
+          "column": 1,
+          "severity": "info",
+          "type": "code_smell",
+          "message": "allow_credentials=True 与 allow_origins=['*'] 一起使用会导致CORS策略失效",
+          "suggestion": "如果设置 allow_credentials=True，必须指定具体的允许来源，不能使用 '*' 通配符"
+        },
+        {
+          "file_path": "main.py",
+          "line": 23,
+          "column": 1,
+          "severity": "warning",
+          "type": "best_practice",
+          "message": "存储初始化在模块级别执行，未使用FastAPI的lifespan事件",
+          "suggestion": "使用 lifespan 上下文管理器处理启动和关闭逻辑，更符合FastAPI最佳实践"
+        },
+        {
+          "file_path": "main.py",
+          "line": 27,
+          "column": 1,
+          "severity": "info",
+          "type": "code_smell",
+          "message": "路径计算 os.path.dirname(__file__) 重复出现多次",
+          "suggestion": "将 templates 目录路径提取为常量或配置项，避免重复计算"
+        },
+        {
+          "file_path": "main.py",
+          "line": 30,
+          "column": 1,
+          "severity": "info",
+          "type": "code_smell",
+          "message": "import语句放在函数内部(FileResponse)，影响代码可读性",
+          "suggestion": "将 FileResponse 的导入移到文件顶部"
+        },
+        {
+          "file_path": "main.py",
+          "line": 30,
+          "column": 1,
+          "severity": "info",
+          "type": "best_practice",
+          "message": "root() 函数返回前端页面，不符合RESTful API设计原则",
+          "suggestion": "根路径应返回API元信息或状态，前端页面应通过独立的前端服务或静态文件处理"
+        },
+        {
+          "file_path": "main.py",
+          "line": 41,
+          "column": 1,
+          "severity": "info",
+          "type": "code_smell",
+          "message": "review_detail() 路由未使用传入的 review_id 参数",
+          "suggestion": "使用 review_id 获取对应的审查详情数据，或改为路径参数无关的静态页面"
+        },
+        {
+          "file_path": "main.py",
+          "line": 52,
+          "column": 1,
+          "severity": "warning",
+          "type": "code_smell",
+          "message": "存在多个示例/测试路由(/hello, /items/, /users/)，这些可能不是生产代码",
+          "suggestion": "如为示例代码，建议移除或添加注释说明；如为业务代码，需完善实现逻辑"
+        },
+        {
+          "file_path": "main.py",
+          "line": 54,
+          "column": 1,
+          "severity": "info",
+          "type": "style",
+          "message": "函数定义上方缺少空行",
+          "suggestion": "在 read_root() 前添加空行，保持代码格式一致"
+        },
+        {
+          "file_path": "main.py",
+          "line": 57,
+          "column": 1,
+          "severity": "info",
+          "type": "style",
+          "message": "read_item() 函数使用了非 async 定义，但其他路由均为 async",
+          "suggestion": "保持一致性，全部使用 async 定义，或确认同步实现的必要性"
+        },
+        {
+          "file_path": "main.py",
+          "line": 69,
+          "column": 1,
+          "severity": "info",
+          "type": "style",
+          "message": "Item 类定义后缺少空行",
+          "suggestion": "在 create_item() 函数前添加空行"
+        },
+        {
+          "file_path": "main.py",
+          "line": 73,
+          "column": 1,
+          "severity": "info",
+          "type": "style",
+          "message": "注释格式不统一，有些使用中文有些使用英文",
+          "suggestion": "统一注释语言和格式风格"
+        },
+        {
+          "file_path": "main.py",
+          "line": 78,
+          "column": 1,
+          "severity": "info",
+          "type": "best_practice",
+          "message": "main 入口使用 reload=True 生产环境不建议启用",
+          "suggestion": "生产环境应使用 gunicorn 等 WSGI 服务器，reload 仅用于开发"
+        }
+      ],
+      "duration_ms": 32699,
+      "error": null
+    }
+  ],
+  "duration_ms": 32709,
+  "created_at": "2026-03-04T16:53:40.956950",
+  "updated_at": "2026-03-04T16:53:40.956950"
+}

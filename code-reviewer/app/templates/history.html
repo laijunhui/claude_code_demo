@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审查历史 - 代码评审工具</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --danger: #DC2626;
+            --danger-hover: #B91C1C;
+            --warning: #F59E0B;
+            --success: #10B981;
+            --info: #3B82F6;
+            --bg: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text: #1E293B;
+            --text-secondary: #64748B;
+            --border: #E2E8F0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 16px;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Card */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            min-width: 120px;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table th {
+            background: var(--bg);
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .table tr:hover {
+            background: rgba(37, 99, 235, 0.02);
+        }
+
+        .table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.completed {
+            background: #F0FDF4;
+            color: #166534;
+            border: 1px solid #BBF7D0;
+        }
+
+        .status-badge.running {
+            background: #EFF6FF;
+            color: #1D4ED8;
+            border: 1px solid #BFDBFE;
+        }
+
+        .status-badge.pending {
+            background: #F9FAFB;
+            color: #6B7280;
+            border: 1px solid #E5E7EB;
+        }
+
+        .status-badge.failed {
+            background: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-badge.running .status-dot {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Review ID */
+        .review-id {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            color: var(--primary);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .review-id:hover {
+            text-decoration: underline;
+        }
+
+        /* Actions */
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: #FEF2F2;
+            color: var(--danger);
+            border: 1px solid #FECACA;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .page-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: white;
+            color: var(--text);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding: 20px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Delete Confirm Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .modal-message {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <a href="/" class="logo">
+                <div class="logo-icon">CR</div>
+                <span class="logo-text">代码评审工具</span>
+            </a>
+            <nav class="nav-links">
+                <a href="/" class="nav-link">代码评审</a>
+                <a href="/history" class="nav-link active">历史记录</a>
+            </nav>
+        </header>
+
+        <div class="container">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>📋</span> 审查历史
+                    </div>
+                    <div class="header-actions">
+                        <a href="/" class="btn btn-primary">➕ 新增代码审核</a>
+                        <button class="btn btn-secondary btn-sm" @click="loadReviews">
+                            🔄 刷新
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Filters -->
+                    <div class="filters">
+                        <select class="filter-select" v-model="statusFilter" @change="loadReviews">
+                            <option value="">全部状态</option>
+                            <option value="pending">等待中</option>
+                            <option value="running">处理中</option>
+                            <option value="completed">已完成</option>
+                            <option value="failed">失败</option>
+                        </select>
+                        <select class="filter-select" v-model="pageSize" @change="loadReviews">
+                            <option value="10">每页 10 条</option>
+                            <option value="20">每页 20 条</option>
+                            <option value="50">每页 50 条</option>
+                        </select>
+                    </div>
+
+                    <!-- Loading -->
+                    <div v-if="loading" class="loading">
+                        <div class="spinner"></div>
+                        <div class="loading-text">加载中...</div>
+                    </div>
+
+                    <!-- Empty -->
+                    <div v-else-if="reviews.length === 0" class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div class="empty-title">暂无审查记录</div>
+                        <div>提交您的第一次代码审查吧</div>
+                    </div>
+
+                    <!-- Table -->
+                    <div v-else class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>审查 ID</th>
+                                    <th>状态</th>
+                                    <th>文件数</th>
+                                    <th>问题数</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="review in reviews" :key="review.review_id">
+                                    <td>
+                                        <a :href="'/review/' + review.review_id" class="review-id">
+                                            {{ review.review_id }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge" :class="review.status">
+                                            <span class="status-dot"></span>
+                                            {{ getStatusText(review.status) }}
+                                        </span>
+                                    </td>
+                                    <td>{{ review.files_count || review.files?.length || 0 }}</td>
+                                    <td>{{ review.issues_count || review.issues?.length || 0 }}</td>
+                                    <td>{{ formatDate(review.created_at) }}</td>
+                                    <td>
+                                        <div class="actions">
+                                            <a :href="'/review/' + review.review_id" class="btn btn-primary btn-sm">
+                                                查看
+                                            </a>
+                                            <button class="btn btn-danger btn-sm" @click="confirmDelete(review)">
+                                                删除
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div v-if="totalPages > 1" class="pagination">
+                        <div class="pagination-info">
+                            共 {{ total }} 条记录，第 {{ page }} / {{ totalPages }} 页
+                        </div>
+                        <div class="pagination-controls">
+                            <button class="page-btn" @click="goPage(1)" :disabled="page <= 1">
+                                首页
+                            </button>
+                            <button class="page-btn" @click="goPage(page - 1)" :disabled="page <= 1">
+                                上一页
+                            </button>
+                            <button
+                                v-for="p in visiblePages"
+                                :key="p"
+                                class="page-btn"
+                                :class="{ active: p === page }"
+                                @click="goPage(p)"
+                            >
+                                {{ p }}
+                            </button>
+                            <button class="page-btn" @click="goPage(page + 1)" :disabled="page >= totalPages">
+                                下一页
+                            </button>
+                            <button class="page-btn" @click="goPage(totalPages)" :disabled="page >= totalPages">
+                                末页
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                Code Reviewer v1.0.0 | 多Agent代码自动评审工具
+            </footer>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+            <div class="modal">
+                <div class="modal-title">确认删除</div>
+                <div class="modal-message">
+                    确定要删除审查记录 <strong>{{ deleteTarget?.review_id }}</strong> 吗？此操作无法撤销。
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" @click="showDeleteModal = false">取消</button>
+                    <button class="btn btn-danger" @click="deleteReview" :disabled="deleting">
+                        {{ deleting ? '删除中...' : '确认删除' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const reviews = ref([]);
+                const loading = ref(false);
+                const page = ref(1);
+                const pageSize = ref(20);
+                const total = ref(0);
+                const totalPages = ref(0);
+                const statusFilter = ref('');
+
+                const showDeleteModal = ref(false);
+                const deleteTarget = ref(null);
+                const deleting = ref(false);
+
+                const loadReviews = async () => {
+                    loading.value = true;
+                    try {
+                        const params = new URLSearchParams({
+                            page: page.value,
+                            page_size: pageSize.value
+                        });
+                        if (statusFilter.value) {
+                            params.append('status', statusFilter.value);
+                        }
+
+                        const response = await fetch(`/api/reviews?${params}`);
+                        const data = await response.json();
+
+                        reviews.value = data.items;
+                        total.value = data.total;
+                        totalPages.value = data.total_pages;
+                    } catch (error) {
+                        console.error('Failed to load reviews:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const visiblePages = computed(() => {
+                    const pages = [];
+                    const start = Math.max(1, page.value - 2);
+                    const end = Math.min(totalPages.value, page.value + 2);
+
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                });
+
+                const goPage = (p) => {
+                    if (p >= 1 && p <= totalPages.value && p !== page.value) {
+                        page.value = p;
+                        loadReviews();
+                    }
+                };
+
+                const getStatusText = (status) => {
+                    const map = {
+                        pending: '等待中',
+                        running: '处理中',
+                        completed: '已完成',
+                        failed: '失败'
+                    };
+                    return map[status] || status;
+                };
+
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return dateStr;
+
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+
+                const confirmDelete = (review) => {
+                    deleteTarget.value = review;
+                    showDeleteModal.value = true;
+                };
+
+                const deleteReview = async () => {
+                    if (!deleteTarget.value) return;
+
+                    deleting.value = true;
+                    try {
+                        const response = await fetch(`/api/reviews/${deleteTarget.value.review_id}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            showDeleteModal.value = false;
+                            deleteTarget.value = null;
+                            loadReviews();
+                        } else {
+                            alert('删除失败');
+                        }
+                    } catch (error) {
+                        console.error('Delete failed:', error);
+                        alert('删除失败: ' + error.message);
+                    } finally {
+                        deleting.value = false;
+                    }
+                };
+
+                onMounted(() => {
+                    loadReviews();
+                });
+
+                return {
+                    reviews,
+                    loading,
+                    page,
+                    pageSize,
+                    total,
+                    totalPages,
+                    statusFilter,
+                    visiblePages,
+                    showDeleteModal,
+                    deleteTarget,
+                    deleting,
+                    loadReviews,
+                    goPage,
+                    getStatusText,
+                    formatDate,
+                    confirmDelete,
+                    deleteReview
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
